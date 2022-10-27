@@ -1,0 +1,250 @@
+<!-- Задача 5. Html. css. javascript
+
+
+Создать HTML страницу с адаптивным дизайном под любое устройство. Можно использовать bootstrap.
+
+По центру:
+- Заголовок "Олимпиада"
+- Поле ввода с лейблом "Участники", плейсхолдер "введите имена участников через запятую" (доступны только кириллические буквы и запятая)
+- Кнопка "Добавить" (должна реагировать не только на щелчок мышью, но и на нажатие enter)
+
+При первом нажатии на кнопку должна появляться таблица с полями: id, имя, очки. Поле ввода "Участники" должно становиться пустым. Плейсхолдер при этом прежний.
+- id - это порядковый номер в списке участников, который ввёл пользователь.
+- очки для каждого участника сгеренировать рандомно.
+
+Все столбцы таблицы должны быть сортируемыми при нажатии на заголовок столбца.
+
+Если таблица уже отобразилась, то снова при нажатии на кнопку "Добавить" в таблицу должны добавляться участники, которых дописали.
+
+Все ошибки пользователя при добавлении участников выводить через модальное окно с небольшим описанием, чтобы пользователь мог исправиться. -->
+
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Task 5</title>
+	<style>
+		body {
+			text-align: center;
+			font-family: sans-serif;
+		}
+		h1 {
+			word-break: break-all;
+		}
+		label {
+			font-size: 1.2em;
+		}
+		input, button {
+			padding: 5px;
+			margin-top: 3px;
+			border: 1px solid #ccc;
+			border-radius: 3px;
+			font-size: 1.1em;
+		}
+		input[type=text] {
+			width: 50%;
+			text-align: left;
+		}
+		input[type=text]:invalid {
+			background: #fdd;
+		}
+		input[type=text]:invalid + input[type=submit]:active, input.invalid[type=submit]:active {
+			color: red;
+		}
+		input[type=submit], button {
+			cursor: pointer;
+		}
+		input[type=submit]:active, button:active {
+			color: green;
+		}
+		table {
+			margin: 20px auto;
+		}
+		table, table th, table td {
+			border: 1px solid #ccc;
+			border-collapse: collapse;
+			padding: 5px;
+			font-size: 1.1em;
+		}
+		table th {
+			cursor: pointer;
+		}
+		table th:after {
+			content: '♦';
+			vertical-align: sub;
+			color: #ccc;
+		}
+		table th.active:after {
+			color: black;
+		}
+		table th.desc:after {
+			content: '▼';
+		}
+		table th.asc:after {
+			content: '▲';
+		}
+		dialog > div {
+			display: flex;
+    		align-items: center;
+		}
+		dialog::backdrop {
+			background: rgba(0, 0, 0, 0.7);
+		}
+	</style>
+</head>
+<body>
+	<h1>Олимпиада</h1>
+	<form name="form">
+		<label for="participants">Участники</label>
+		<input type="text" name="participants" id="participants" placeholder="Введите имена участников через запятую">
+		<input type="submit" name="submit" value="Добавить">
+	</form>
+
+	<dialog>
+		<p>В тектовое поле допускается ввод только букв кириллицы и запятых.</p>
+		<button id="closeDialog">OK</button>
+	</dialog>
+
+	<script>
+		const dialog = document.querySelector('dialog');
+		document.getElementById('closeDialog').addEventListener('click', () => dialog.close());
+
+
+		form.submit.addEventListener('mousedown', function() {
+			if(!form.participants.value.trim()) {
+				this.className = 'invalid';
+			}
+		});
+
+		form.submit.addEventListener('mouseup', function() {
+			this.className = '';
+		});
+
+		form.addEventListener('submit', function(e) {
+			e.preventDefault();
+
+			if(!this.participants.value.trim()) {
+				return;
+			}
+
+			if(!/^[А-Яа-яЁё,\s]+$/.test(this.participants.value)) {
+				dialog.showModal();
+				return;
+			}
+
+
+			let values = this.participants.value.split(',');
+			let table = document.querySelector('table'),
+				 indexTr = (table) ? table.querySelectorAll('tr').length : undefined,
+				 trs;
+
+			this.participants.value = '';
+
+
+			values = values.map((value, index) => {
+				if (!value.trim()) return;
+
+				let score = Math.random().toFixed(2).slice(2).replace(/^0/, '');
+				index = indexTr++ || index+1;
+
+				return `<tr><td>${index}</td><td>${value.trim()}</td><td>${score}</td></tr>`;
+			});
+
+			addTable(table, values.join(''));
+		});
+
+		document.addEventListener('click', function(e) {
+			if (e.target.tagName == 'TH') {
+				let table = e.target.closest('table'),
+					 rows = Array.from(table.rows),
+					 trs;
+
+
+				if (e.target.classList.contains('desc')) {
+					order = 'desc';
+				} else {
+					order = 'asc';
+				}
+
+				switch(e.target.id) {
+					case 'id':
+						trs = sortTable(rows, 0, order);
+						console.log(e.target.className);
+						break
+					case 'name':
+						trs = sortTable(rows, 1, order);
+						break;
+					case 'score':
+						trs = sortTable(rows, 2, order);
+						break;
+				}
+
+				Array.from(table.querySelectorAll('tr')).forEach((tr, i) => {
+					if (!i) return false;
+					tr.remove();
+				});
+
+				Array.from(table.querySelectorAll('th')).forEach(th => th.classList.remove('active'));
+
+				e.target.classList.toggle('desc');
+				e.target.classList.toggle('asc');
+				e.target.classList.add('active');
+
+				addTable(table, trs.join(''));
+			}
+		});
+
+		function addTable(table, trs) {
+			if (!table) {
+				form.insertAdjacentHTML('afterend', `
+					<table>
+						<tr>
+							<th id='id' class='desc active'>ID</th>
+							<th id='name' class='desc'>Имя</th>
+							<th id='score' class='desc'>Очки</th>
+						</tr>
+						${trs}
+					</table>
+				`);
+			} else {
+				table.insertAdjacentHTML('beforeend', trs);
+			}
+		}
+
+		function sortTable(rows, index, order) {
+			rows.shift();
+			rows = _sort(rows, index, order);
+
+			return rows.map(values => {
+				values = values.innerText.split(/\s/);
+				return `<tr><td>${values[0]}</td><td>${values[1]}</td><td>${values[2]}</td></tr>`;
+			});
+		}
+
+		function _sort(rows, index, order) {
+			if(order === 'desc') {
+				rows = rows.sort((a, b) => {
+					a = a.innerText.split(/\s/)[index];
+					b = b.innerText.split(/\s/)[index];
+
+					if (a < b) return 1;
+					if (a == b) return 0;
+					if (a > b) return -1;
+				});
+			} else if(order === 'asc') {
+				rows = rows.sort((a, b) => {
+					a = a.innerText.split(/\s/)[index];
+					b = b.innerText.split(/\s/)[index];
+
+					if (b < a) return 1;
+					if (a == b) return 0;
+					if (b > a) return -1;
+				});
+			}
+
+			return rows;
+		}
+	</script>
+</body>
+</html>
